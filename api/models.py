@@ -19,8 +19,8 @@ def generate_unique_code():
 
 #each object is a table
 class Room(models.Model):
-    #define fields
-    code = models.CharField(max_length=8, default = "", unique= True) #variable = data_type(contraints)
+    #define fields, and default, important not to call generate_unique_code
+    code = models.CharField(max_length=8, default = generate_unique_code, unique= True) #variable = data_type(contraints)
     #keep track who the host
     host = models.CharField(max_length=50, unique=True)
     guest_can_pause = models.BooleanField(null=False, default=False)
