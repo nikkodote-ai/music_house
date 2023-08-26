@@ -15,6 +15,23 @@ class RoomView(generics.ListAPIView):
     # the RoomSerializer that knows how to handle the python model to json, then change urls.py
     serializer_class = RoomSerializer
 
+class GetRoom(APIView):
+    serializer_class = RoomSerializer
+    lookup_url_kwarg = 'code'
+
+    def get(self, request, format = None):
+        code= request.GET.get(self.lookup_url_kwarg)
+        if code != None:
+            #code is unique and room is expected to be 1
+            room = Room.objects.filter(code = code)
+            if len(room) > 0:
+                data = RoomSerializer(room[0]).data
+                data['is_host'] = self.request.session.session_key == room[0].host
+                return Response(data, status = status.HTTP_200_OK)
+            return Response({'Room Not Found': 'Invalid Room Code'}, status = status.HTTP_200_OK)
+        
+        return Response({'Bad Request': 'Code parameter not found in request'}, status  =status.HTTP_200_OK)
+
 class CreateRoomView(APIView):
     #serializer class is important to recognize the data. if the form is not rendered correctly, you might have missed this
     serializer_class = CreateRoomSerializer
@@ -34,7 +51,7 @@ class CreateRoomView(APIView):
 
             #UPDATING existing room of host
             queryset = Room.objects.filter(host = host)
-            if queryset.exist():
+            if queryset.exists():
                 room = queryset[0]
                 room.guest_can_pause = guest_can_pause
                 room.votes_to_skip = votes_to_skip
@@ -46,4 +63,4 @@ class CreateRoomView(APIView):
                 room = Room(host = host, guest_can_pause = guest_can_pause, votes_to_skip = votes_to_skip)
                 room.save()
             #returna  json formatted data
-            return Response(RoomSerializer(room).data, status = status.HTTP_200)
+            return Response(RoomSerializer(room).data, status = status.HTTP_200_OK)
