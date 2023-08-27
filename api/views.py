@@ -15,6 +15,27 @@ class RoomView(generics.ListAPIView):
     # the RoomSerializer that knows how to handle the python model to json, then change urls.py
     serializer_class = RoomSerializer
 
+
+class JoinRoom(APIView):
+    lookup_url_kwarg = 'code'
+
+    def post(self, request, format=None):
+        if not self.request.session.exists(self.request.session.session_key):
+            self.request.session.create()
+
+        code = request.data.get(self.lookup_url_kwarg)
+        if code != None:
+            room_result = Room.objects.filter(code=code)
+            if len(room_result) > 0:
+                room = room_result[0]
+                #make a note in backend to say this user is in this room
+                self.request.session['room_code'] = code
+                return Response({'message': 'Room Joined!'}, status=status.HTTP_200_OK)
+
+            return Response({'Bad Request': 'Invalid Room Code'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'Bad Request': 'Invalid post data, did not find a code key'}, status=status.HTTP_400_BAD_REQUEST)
+
 class GetRoom(APIView):
     serializer_class = RoomSerializer
     lookup_url_kwarg = 'code'
@@ -57,10 +78,13 @@ class CreateRoomView(APIView):
                 room.votes_to_skip = votes_to_skip
                 # fields we want to force udate
                 room.save(update_fields=['guest_can_pause', 'votes_to_skip'])
+                self.request.session['room_code'] = room.code
+                return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
             
             #ELSE, MAKING A NEW ROOM
             else:
                 room = Room(host = host, guest_can_pause = guest_can_pause, votes_to_skip = votes_to_skip)
                 room.save()
+                self.request.session['room_code'] = room.code
             #returna  json formatted data
             return Response(RoomSerializer(room).data, status = status.HTTP_200_OK)
